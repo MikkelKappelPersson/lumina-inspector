@@ -378,8 +378,8 @@ static int mainFunc(span<const string> arguments) {
         parser,
         "HOSTNAME",
         "The hostname to listen on for IPC communication. "
-        "tev can have a distinct primary instance for each unique hostname in use. "
-        "Default is 127.0.0.1:14158",
+        "Lumina Inspector can have a distinct primary instance for each unique hostname in use. "
+        "Default is 127.0.0.1:14159",
         {"host", "hostname"},
     };
 

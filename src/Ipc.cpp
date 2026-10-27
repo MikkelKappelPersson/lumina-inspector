@@ -394,7 +394,7 @@ static int closeSocket(Ipc::socket_t socket) {
 Ipc::Ipc(string_view hostname) : mSocketFd{INVALID_SOCKET} {
     if (hostname.empty()) {
         if (!flatpakInfo() || flatpakInfo()->hasNetworkAccess()) {
-            hostname = "127.0.0.1:14158";
+            hostname = "127.0.0.1:14159";
         } else {
             hostname = "unix";
         }

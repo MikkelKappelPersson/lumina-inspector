@@ -1,6 +1,6 @@
 # lumina-inspector
 
-A fork of [tev — the EDR viewer](https://github.com/Tom94/tev), extended for the MED10 thesis workflow: inspecting HDR / ACES scene-linear renders while flipping through folders of images.
+A fork of [tev — the EDR viewer](https://github.com/Tom94/tev), developed as a scientific and technical image analysis tool for HDR and floating-point data.
 
 ## Base
 
@@ -53,14 +53,14 @@ The binary is named `lumina-inspector`, so the stock AppImage stays available as
 
 ## Licence
 
-GPL-3.0, inherited from tev. See `LICENSE.txt`. This repository is the complete corresponding source for any binary built from it.
+GPL-3.0, inherited from tev. See `LICENSE.txt` for the full text and `NOTICE` for the attribution summary. This repository is the complete corresponding source for any binary built from it.
 
 ## Planned changes
 
 - [ ] Read EXR `colorInteropID` so ACES / AP0 files display with correct primaries
 - [ ] Remappable keys; `Left` / `Right` flip images
 - [ ] Persist settings between sessions (inspection colour space, exposure, gamma)
-- [ ] Display transform via a 3D LUT baked from the thesis OCIO config
+- [ ] Display transform via a 3D LUT baked from an OCIO config
 - [ ] Folder grouping and natural sort
 - [ ] Live plot overlays over IPC, driven by external scripts
 

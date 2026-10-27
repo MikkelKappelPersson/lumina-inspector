@@ -1,0 +1,17 @@
+Lumina Inspector
+Copyright (C) 2026 Mikkel Kappel Persson
+
+This program is a fork of tev — The EDR Viewer.
+
+    Upstream:          https://github.com/Tom94/tev
+    Upstream copyright: Copyright (C) 2017-2026 Thomas Müller and contributors
+    Upstream licence:   GNU General Public License, version 3
+
+The upstream source is used and redistributed under the terms of the
+GNU General Public License v3.0. Modifications made in this fork are
+released under the same licence. The complete licence text is in
+LICENSE.txt.
+
+Lumina Inspector is not affiliated with, or endorsed by, the tev project.
+
+Source for this fork: https://github.com/MikkelKappelPersson/lumina-inspector

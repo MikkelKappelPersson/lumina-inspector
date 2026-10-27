@@ -1,162 +1,157 @@
-# tev — The EDR Viewer &nbsp;&nbsp; ![](https://github.com/tom94/tev/workflows/CI/badge.svg)
+# Lumina Inspector
 
-High dynamic range (HDR) image viewer for people who care about colors.
+A scientific and technical image analysis tool for high dynamic range and floating-point image data.
 
-- __Lightning fast:__ starts up instantly, loads hundreds of images in seconds.
-- __Accurate:__ understands HDR and color profiles (ICC, CICP, etc.). Displays HDR on all operating systems.
-- __Versatile:__ supports many [file formats](#file-formats) and their quirks: gain maps, aux channels, animation, and more metadata than just EXIF & XMP. Pixel-peep: histograms, tonemaps, error metrics, etc. in any color space.
+Lumina Inspector is a fork of [tev — The EDR Viewer](https://github.com/Tom94/tev). It keeps tev's speed, format coverage, and colour accuracy, and adds what quantitative work needs: source colour-space awareness, colour-managed display transforms, persistent settings, and a scriptable overlay channel for measurements and plots.
+
+> **Status:** early fork, tracking tev. Everything tev does, it still does. Additions are listed under [What is different](#what-is-different-from-tev).
 
 ![Screenshot](resources/screenshot.png)
-_A false-color comparison of two multi-layer OpenEXR images of a beach ball. Image courtesy of [openexr-images](https://github.com/openexr/openexr-images)._
+_The interface inherited from tev: a false-colour comparison of two multi-layer OpenEXR images. Image courtesy of [openexr-images](https://github.com/openexr/openexr-images)._
+
+## Why this fork exists
+
+Scientific images are data, not pictures. The questions you ask of them are quantitative — what is this pixel's value, which colour space is this in, how far is this render from the reference, where does it clip — and a viewer built for photography answers only some of them.
+
+Lumina Inspector is aimed at that:
+
+- **Values, unclamped.** Float data is read and reported as stored, including values far outside `[0,1]` and negative values from out-of-gamut conversions.
+- **Colour as metadata, not assumption.** Source primaries, transfer function, and white point are treated as properties of the data, and the display transform is a separate, explicit step.
+- **Measurements over pictures.** Histograms, error metrics against a reference, and script-driven overlays for regions, annotations, and plots.
+- **Reproducibility.** Settings and transforms are files, not hidden state, so a figure can be regenerated from a recorded configuration.
+
+It is not a compositor, a video player, or an asset manager, and it does not try to be.
+
+## What is different from tev
+
+Current:
+
+- Installs as `lumina-inspector`, so the stock `tev` can stay installed alongside it.
+- IPC listens on port `14159` instead of `14158`, so the two never capture each other's launches.
+- Own window title and About panel.
+
+Planned:
+
+- [ ] Read EXR `colorInteropID` so ACES / AP0 files display with correct primaries without manual tagging
+- [ ] Colour-managed display transform via a 3D LUT baked from an OCIO config
+- [ ] Remappable keys; `Left` / `Right` flip images
+- [ ] Persistent settings between sessions (inspection colour space, exposure, gamma)
+- [ ] Folder grouping and natural sort
+- [ ] Measurement and plot overlays driven over IPC
 
 ## Installation
 
-Download __tev__ for
-- __Windows__: [Installer (.msi)](https://github.com/Tom94/tev/releases/latest/download/tev-installer.msi), [portable executable (.exe)](https://github.com/Tom94/tev/releases/latest/download/tev.exe)
-- __Linux__: [AppImage (.appimage)](https://github.com/Tom94/tev/releases/latest/download/tev.appimage) ([how to run AppImages](https://docs.appimage.org/introduction/quickstart.html))
-- __macOS__: [Installer (.dmg)](https://github.com/Tom94/tev/releases/latest/download/tev.dmg)
+Linux, from source. This is the only supported path today.
 
-Or install __tev__ via package managers:
-
-- [AUR](https://aur.archlinux.org/packages/tev): `yay -S tev`
-- [brew](https://formulae.brew.sh/cask/tev): `brew install tev`
-- [flathub](https://flathub.org/en/apps/io.github.tom94.tev): `flatpak install flathub io.github.tom94.tev`
-- [scoop](https://scoop.sh/#/apps?q=tev&id=a2ccab649627072fcfa357924d93478e0f1f3f16): `scoop install extras/tev`
-- [winget](https://winstall.app/apps/Tom94.tev): `winget install Tom94.tev`
-- [nix](https://mynixos.com/nixpkgs/package/tev):
-
-```nix
-environment.systemPackages = with pkgs; [ tev ];
+```bash
+git clone --recursive https://github.com/MikkelKappelPersson/lumina-inspector
+cd lumina-inspector
+cmake . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+cmake --install build --prefix ~/.local/opt/lumina-inspector
+ln -sf ~/.local/opt/lumina-inspector/bin/lumina-inspector ~/.local/bin/lumina-inspector
 ```
 
-Or build and install __tev__ from source. See the [building tev](#building-tev) section below for details. TL;DR:
-```sh
-$ git clone --recursive https://github.com/Tom94/tev
-$ cmake . -B build -DCMAKE_BUILD_TYPE=Release
-$ cmake --build build --config Release -j
-$ cmake --install build
+Requirements: CMake, a C++23 compiler, NASM, and the X11 / Wayland / OpenGL / D-Bus development packages. On Arch Linux:
+
+```bash
+sudo pacman -S cmake ninja nasm wayland-protocols libxkbcommon dbus libffi glu libglvnd \
+    libx11 libxinerama libxcursor libxrandr libxi
+```
+
+On Debian/Ubuntu the upstream list applies:
+
+```bash
+sudo apt-get install cmake libdbus-1-dev libffi-dev libglu1-mesa-dev libwayland-dev \
+    libxkbcommon-dev nasm wayland-protocols xorg-dev
 ```
 
 ## Usage
 
-### Graphical User Interface
+### Graphical interface
 
-Images can be opened via a file dialog or by dragging them into __tev__.
-They can be reloaded, closed, or filtered at any time, so don't worry about opening more images than exactly needed.
+Open images with the file dialog or by dragging them in. They can be reloaded, closed, or filtered at any time, so there is no harm in opening more than you need.
 
-Select an image by left-clicking it, and optionally select a reference image to compare the current selection to by right-clicking.
-For convenience, the current selection can be moved with the Up/Down or the 1-9 keys. For a comprehensive list of keyboard shortcuts click the little "?" icon at the top (or press "h") or view [this online visualization](https://keycombiner.com/collecting/collections/shared/f050cc02-f23a-425c-b032-b4c3659c7ef4).
+Left-click selects an image; right-click selects a reference to compare against. `Up` / `Down` move the selection. Press `h` for the full shortcut list, or hover any control for a tooltip.
 
-If the interface seems overwhelming, you can hover any controls to view an explanatory tooltip.
+### Command line
 
-### Command Line
-
-__tev__ takes images as positional command-line arguments:
-```sh
-$ tev foo.exr bar.exr
+```bash
+lumina-inspector foo.exr bar.exr
 ```
 
-By default, all layers and channels are loaded, but individual layers or channels can also be specified. In the following example, the *depth* layer of *foo.exr* and the *r*, *g*, and *b* channels of *foo.exr* and *bar.exr* are loaded.
-```sh
-$ tev :depth foo.exr :r,g,b foo.exr bar.exr
+Layers and channels can be selected per image:
+
+```bash
+lumina-inspector :depth foo.exr :r,g,b foo.exr bar.exr
 ```
 
-Other command-line arguments exist (e.g. for starting __tev__ with a pre-set exposure value). For a list of all arguments simply invoke
-```sh
-$ tev -h
+For all options:
+
+```bash
+lumina-inspector -h
 ```
 
-### Over the Network
+### Over the network
 
-__tev__ can also be controlled remotely over the network using a simple TCP-based protocol.
+The viewer can be driven over a simple TCP protocol. The `--host` argument sets the address to listen on; the default is `127.0.0.1:14159`.
 
-The `--host` argument specifies the IP and port __tev__ is listening to. By default, __tev__ only accepts connections from localhost (`127.0.0.1:14158`), which is useful, for example, as frontend for a supported renderer like [pbrt version 4](https://github.com/mmp/pbrt-v4).
+| Operation | Function |
+| :--- | :--- |
+| `OpenImage` | Opens an image from a path on the machine the viewer runs on |
+| `CreateImage` | Creates a blank image with a given name, size, and channels |
+| `UpdateImage` | Updates pixels in a rectangular region |
+| `CloseImage` | Closes a named image |
+| `ReloadImage` | Reloads an image from disk |
+| `VectorGraphics` | Draws vector graphics over a named image |
 
-The following operations exist:
+Each packet is:
 
-| Operation | Function
-| :--- | :----------
-| `OpenImage` | Opens an image from a specified path on the machine __tev__ is running on.
-| `CreateImage` | Creates a blank image with a specified name, size, and set of channels. If an image with the specified name already exists, it is overwritten.
-| `UpdateImage` | Updates the pixels in a rectangular region.
-| `CloseImage` | Closes a specified image.
-| `ReloadImage` | Reloads an image from a specified path on the machine __tev__ is running on.
-| `VectorGraphics` | Draws vector graphics over a specified image.
-
-__tev__'s network protocol is already implemented in the following languages:
-- [C++](https://github.com/westlicht/tevclient) (by Simon Kallweit)
-- [Python](https://pypi.org/project/tevclient/) (initial implementation by Tomáš Iser)
-  - `pip install tevclient`
-- [Rust](https://crates.io/crates/tev_client) (by Karel Peeters)
-
-If using these implementations is not an option, it's easy to write your own one. Each packet has the simple form
 ```
 [uint32_t total_length_in_bytes][byte operation_type][byte[] operation_specific_payload]
 ```
-where integers are encoded in little endian.
 
-There are helper functions in [Ipc.cpp](src/Ipc.cpp) (`IpcPacket::set*`) that show exactly how each packet has to be assembled. These functions do not rely on external dependencies, so you can copy and paste them into your project to interface with __tev__.
+with little-endian integers. `src/Ipc.cpp` contains the `IpcPacket::set*` helpers that show exactly how each packet is assembled, with no external dependencies.
 
+Existing tev clients work once pointed at the right port:
 
-## Building tev
+- [Python](https://pypi.org/project/tevclient/): `pip install tevclient`
+- [C++](https://github.com/westlicht/tevclient)
+- [Rust](https://crates.io/crates/tev_client)
 
-All that is required for building __tev__ is [CMake](https://cmake.org/) and a C++23-compatible compiler. GCC, Clang, and MSVC (Visual Studio) are supported.
-On x86, __tev__ additionally requires [NASM](https://www.nasm.us/) for generating optimized assembly.
+## File formats
 
-Most Linux distributions additionally require _xorg_, _wayland_, _gl_, and _dbus_. On Ubuntu/Debian simply call
-```sh
-$ apt-get install cmake libdbus-1-dev libffi-dev libglu1-mesa-dev libwayland-dev libxkbcommon-dev nasm wayland-protocols xorg-dev
-```
+- **EXR** (via [OpenEXR](https://github.com/AcademySoftwareFoundation/openexr))
+- **JPEG XL** (including gain maps; via [libjxl](https://github.com/libjxl/libjxl))
+- **JPEG XR** (via [jxrlib](https://github.com/Tom94/jxrlib))
+- **JPEG** (including gain maps; via [libjpeg-turbo](https://github.com/libjpeg-turbo/libjpeg-turbo))
+- **JPEG 2000** (via [openjpeg](https://github.com/uclouvain/openjpeg))
+- **PNG**, APNG (via [libpng](https://github.com/pnggroup/libpng))
+- **PFM**, PAM, PNM, PBM, PGM, PPM (see [NetPBM](https://netpbm.sourceforge.net/) and [PFM](https://www.pauldebevec.com/Research/HDR/PFM/))
+- **QOI** (via [qoi](https://github.com/phoboslab/qoi))
+- **DDS** (via [DirectXTex](https://github.com/microsoft/DirectXTex) + [DirectXMath](https://github.com/microsoft/DirectXMath) + [DirectX-Headers](https://github.com/microsoft/DirectX-Headers))
+- **KTX2**, **KTX** (via [KTX-Software](https://github.com/KhronosGroup/KTX-Software) + [bcdec](https://github.com/iOrange/bcdec) + [etcdec](https://github.com/iOrange/etcdec))
+- **WEBP** (via [libwebp](https://chromium.googlesource.com/webm/libwebp))
+- **TIFF**, **DNG** (via [libtiff](https://gitlab.com/libtiff/libtiff))
+- **AVIF** (including gain maps; via [dav1d](https://github.com/videolan/dav1d) + [libheif](https://github.com/strukturag/libheif))
+- **HEIC** (including gain maps; via [libde265](https://github.com/strukturag/libde265) + [libheif](https://github.com/strukturag/libheif); disabled by default, enable with the `TEV_SUPPORT_HEIC` CMake option and check patent law in your jurisdiction)
+- **BMP**, ICO, CUR (including colour profiles)
+- **HDR**, GIF, PIC, PSD, TGA (via [stb_image](https://github.com/wjakob/nanovg/blob/master/src/stb_image.h))
+- **RAW** and camera-specific RAW formats (via [LibRaw](https://github.com/LibRaw/LibRaw))
+- **DICOM** (via [GDCM](https://github.com/malaterre/GDCM))
+- **FITS** (via [cfitsio](https://github.com/HEASARC/cfitsio.git))
 
-On Windows, you can install [Visual Studio](https://visualstudio.microsoft.com/) (Community Edition is sufficient) and select the "Desktop
-development with C++" workload. Make sure to also install NASM and CMake, e.g. by running `winget install nasm cmake` in the command line.
+## Attribution and licence
 
-Once all dependencies are installed, begin by cloning this repository and all its submodules using the following command:
-```sh
-$ git clone --recursive https://github.com/Tom94/tev
-```
+Lumina Inspector is an independent fork of **tev — The EDR Viewer**.
 
-Then, use [CMake](https://cmake.org/) as follows:
-```sh
-$ cmake . -B build -DCMAKE_BUILD_TYPE=Release
-$ cmake --build build --config Release -j
-```
+- Upstream: <https://github.com/Tom94/tev>
+- Upstream copyright: Copyright (C) 2017–2026 Thomas Müller and contributors
+- Upstream licence: GNU General Public License v3.0
+- Fork modifications: Copyright (C) 2026 Mikkel Kappel Persson
 
-Afterwards, __tev__ can be installed via
-```sh
-$ cmake --install build
-```
-or you can create a standalone installer (Windows, macOS) / [AppImage](https://appimage.org/) (Linux) with
-```sh
-$ cpack --config build/CPackConfig.cmake
-```
+All upstream code remains under the GPL-3.0. Modifications in this repository are released under the same licence. The full licence text is in [`LICENSE.txt`](LICENSE.txt); the attribution summary is in [`NOTICE`](NOTICE).
 
-## File Formats
+This project is not affiliated with, or endorsed by, the tev project. If you want the original, use [tev](https://github.com/Tom94/tev).
 
-- __EXR__ (via [OpenEXR](https://github.com/AcademySoftwareFoundation/openexr))
-- __JPEG XL__ (including gain maps; via [libjxl](https://github.com/libjxl/libjxl))
-- __JPEG XR__ (e.g. HDR screenshots from Windows & XBOX; via [jxrlib](https://github.com/Tom94/jxrlib))
-- __JPEG__ (including gain maps, e.g. HDR pictures from Android; via [libjpeg-turbo](https://github.com/libjpeg-turbo/libjpeg-turbo))
-- __JPEG 2000__ (via [openjpeg](https://github.com/uclouvain/openjpeg))
-- __PNG__, APNG (via [libpng](https://github.com/pnggroup/libpng))
-- __PFM__, PAM, PNM, PBM, PGM, PPM (generally: see [NetPBM](https://netpbm.sourceforge.net/) and [PFM](https://www.pauldebevec.com/Research/HDR/PFM/))
-- __QOI__ (via [qoi](https://github.com/phoboslab/qoi))
-- __DDS__ (via [DirectXTex](https://github.com/microsoft/DirectXTex)+[DirectXMath](https://github.com/microsoft/DirectXMath)+[DirectX-Headers](https://github.com/microsoft/DirectX-Headers))
-- __KTX2__, __KTX__ (via [KTX-Software](https://github.com/KhronosGroup/KTX-Software)+[bcdec](https://github.com/iOrange/bcdec)+[encdec](https://github.com/iOrange/etcdec))
-- __WEBP__ (via [libwebp](https://chromium.googlesource.com/webm/libwebp))
-- __TIFF__, __DNG__ (via [libtiff](https://gitlab.com/libtiff/libtiff))
-- __AVIF__ (including gain maps, e.g. HDR pictures from Android; via [dav1d](https://github.com/videolan/dav1d)+[libheif](https://github.com/strukturag/libheif))
-- __HEIC__ (including gain maps, e.g. HDR pictures from iPhones; via [libde265](https://github.com/strukturag/libde265)+[libheif](https://github.com/strukturag/libheif); disabled in binary release. You must build __tev__ yourself with the `TEV_SUPPORT_HEIC` CMake option. Check patent laws in your jurisdiction before enabling this feature.)
-- __BMP__, ICO, CUR (including color profiles)
-- __HDR__, GIF, PIC, PSD, TGA (via [stb_image](https://github.com/wjakob/nanovg/blob/master/src/stb_image.h))
-- __RAW__ and various camera-specific RAW formats (via [LibRaw](https://github.com/LibRaw/LibRaw))
-- __DICOM__ (via [GDCM](https://github.com/malaterre/GDCM))
-- __FITS__ (via [cfitsio](https://github.com/HEASARC/cfitsio.git))
-
-## License
-
-__tev__ is available under the GPLv3 license, which you can find in the `LICENSE.txt` file.
-[TL;DR](https://www.tldrlegal.com/license/gnu-general-public-license-v3-gpl-3).
-
-Older versions of __tev__ (v1.30 and earlier) are available under the BSD 3-Clause license.
-If required, use git tags to check out these older versions.
+Older versions of tev (v1.30 and earlier) were released under the BSD 3-Clause licence. This fork is based on GPL-3 code and does not include that older history's licensing.

@@ -5,10 +5,16 @@ A fork of [tev — the EDR viewer](https://github.com/Tom94/tev), extended for t
 ## Base
 
 - Upstream: <https://github.com/Tom94/tev>
-- Tag: `v2.14.0`
-- Commit: `18dabdd78172fea9aba8740ee33e90af1de9f1e4` (2026-08-22)
+- Forked at tag `v2.14.0`: `18dabdd78172fea9aba8740ee33e90af1de9f1e4` (2026-08-22)
+- Upstream master merged: `809b02c` (2026-10-03)
 
 `upstream` points at `Tom94/tev`. The local `master` branch mirrors upstream; `main` is this fork.
+
+## Upstream merges
+
+| Date | Upstream commit | Note |
+|---|---|---|
+| 2026-10-27 | `809b02c` | 21 commits past `v2.14.0`; adds KTX/KTX2 support, KTX channel handling, CI fixes |
 
 ## Branch model
 

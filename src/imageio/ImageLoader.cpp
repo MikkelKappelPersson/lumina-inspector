@@ -27,6 +27,7 @@
 #include <tev/imageio/Jpeg2000ImageLoader.h>
 #include <tev/imageio/JpegTurboImageLoader.h>
 #include <tev/imageio/JxrImageLoader.h>
+#include <tev/imageio/KtxImageLoader.h>
 #include <tev/imageio/PfmImageLoader.h>
 #include <tev/imageio/PngImageLoader.h>
 #include <tev/imageio/QoiImageLoader.h>
@@ -35,7 +36,7 @@
 #include <tev/imageio/TiffImageLoader.h>
 #include <tev/imageio/WebpImageLoader.h>
 
-#ifdef _WIN32
+#ifdef TEV_SUPPORT_DDS
 #    include <tev/imageio/DdsImageLoader.h>
 #endif
 #ifdef TEV_USE_LIBHEIF
@@ -59,7 +60,7 @@ const vector<unique_ptr<ImageLoader>>& ImageLoader::getLoaders() {
         imageLoaders.emplace_back(new PfmImageLoader());
         imageLoaders.emplace_back(new ClipboardImageLoader());
         imageLoaders.emplace_back(new EmptyImageLoader());
-#ifdef _WIN32
+#ifdef TEV_SUPPORT_DDS
         imageLoaders.emplace_back(new DdsImageLoader());
 #endif
 #ifdef TEV_USE_LIBHEIF
@@ -68,6 +69,7 @@ const vector<unique_ptr<ImageLoader>>& ImageLoader::getLoaders() {
 #ifdef TEV_SUPPORT_JXL
         imageLoaders.emplace_back(new JxlImageLoader());
 #endif
+        imageLoaders.emplace_back(new KtxImageLoader());
         imageLoaders.emplace_back(new FitsImageLoader());
         imageLoaders.emplace_back(new QoiImageLoader());
         imageLoaders.emplace_back(new WebpImageLoader());
@@ -108,6 +110,8 @@ const vector<string_view>& ImageLoader::supportedMimeTypes() {
         "image/jpeg",
         "image/jxl",
         "image/jxr",
+        "image/ktx",
+        "image/ktx2",
         "image/png",
         "image/qoi",
         "image/tga",
@@ -118,7 +122,7 @@ const vector<string_view>& ImageLoader::supportedMimeTypes() {
         "image/vnd.radiance",
         "image/webp",
         "image/x-adobe-dng",
-#ifdef _WIN32
+#ifdef TEV_SUPPORT_DDS
         "image/x-dds",
         "image/x-direct-draw-surface",
 #endif
@@ -141,13 +145,7 @@ const vector<string_view>& ImageLoader::supportedMimeTypes() {
 }
 
 Task<vector<Channel>> ImageLoader::makeInterleavedChannels(
-    size_t numChannels,
-    bool hasAlpha,
-    Vector2i size,
-    EPixelFormat pixelFormat,
-    EPixelFormat desiredFormat,
-    string_view layer,
-    int priority
+    size_t numChannels, bool hasAlpha, Vector2i size, EPixelFormat pixelFormat, EPixelFormat desiredFormat, string_view layer, int priority
 ) {
     if (numChannels == 0) {
         throw ImageLoadError{"Invalid number of rgba channels."};

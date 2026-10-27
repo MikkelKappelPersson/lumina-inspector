@@ -44,6 +44,7 @@ if (TEV_LINUX_REVERSE_DNS_APP_ID)
 endif()
 
 option(TEV_SUPPORT_AVIF "Support loading AVIF images" ON)
+option(TEV_SUPPORT_DDS "Support loading DDS images" ON)
 option(TEV_SUPPORT_HEIC "Support loading HEIC images" OFF)
 option(TEV_SUPPORT_JXL "Support loading/saving JPEG XL images" ON)
 
@@ -157,6 +158,7 @@ set(TEV_SOURCES
     include/tev/imageio/JpegTurboImageLoader.h src/imageio/JpegTurboImageLoader.cpp
     include/tev/imageio/JpegTurboImageSaver.h src/imageio/JpegTurboImageSaver.cpp
     include/tev/imageio/JxrImageLoader.h src/imageio/JxrImageLoader.cpp
+    include/tev/imageio/KtxImageLoader.h src/imageio/KtxImageLoader.cpp
     include/tev/imageio/PfmImageLoader.h src/imageio/PfmImageLoader.cpp
     include/tev/imageio/PngImageLoader.h src/imageio/PngImageLoader.cpp
     include/tev/imageio/PngImageSaver.h src/imageio/PngImageSaver.cpp
@@ -200,9 +202,11 @@ set(TEV_SOURCES
 if (MSVC)
     list(APPEND TEV_SOURCES resources/windows/icon.rc)
     list(APPEND TEV_SOURCES resources/windows/tev.manifest)
-    list(APPEND TEV_SOURCES include/tev/imageio/DdsImageLoader.h src/imageio/DdsImageLoader.cpp)
 elseif (APPLE)
     list(APPEND TEV_SOURCES resources/macos/icon.icns)
+endif()
+if (TEV_SUPPORT_DDS)
+    list(APPEND TEV_SOURCES include/tev/imageio/DdsImageLoader.h src/imageio/DdsImageLoader.cpp)
 endif()
 if (TEV_USE_LIBHEIF)
     list(APPEND TEV_SOURCES include/tev/imageio/HeifImageLoader.h src/imageio/HeifImageLoader.cpp)
@@ -258,6 +262,9 @@ endif()
 if (TEV_SUPPORT_AVIF)
     list(APPEND TEV_DEFINITIONS -DTEV_SUPPORT_AVIF)
 endif()
+if (TEV_SUPPORT_DDS)
+    list(APPEND TEV_DEFINITIONS -DTEV_SUPPORT_DDS)
+endif()
 if (TEV_SUPPORT_HEIC)
     list(APPEND TEV_DEFINITIONS -DTEV_SUPPORT_HEIC)
 endif()
@@ -270,12 +277,15 @@ endif()
 
 target_compile_definitions(tev PRIVATE ${TEV_DEFINITIONS})
 
-set(TEV_LIBS cfitsio clip exif_static gdcm-tev JPEG::JPEG jxrglue libraw::libraw_r nanogui OpenEXR::OpenEXR openjpeg-tev png_static tiff webpdemux XMPCore xsimd)
+set(TEV_LIBS cfitsio clip exif_static gdcm-tev JPEG::JPEG jxrglue ktx_read libraw::libraw_r nanogui OpenEXR::OpenEXR openjpeg-tev png_static tiff webpdemux XMPCore xsimd)
 if (MSVC)
-    list(APPEND TEV_LIBS DirectXTex wsock32 ws2_32)
+    list(APPEND TEV_LIBS wsock32 ws2_32)
 endif()
 if (TEV_USE_LIBHEIF)
     list(APPEND TEV_LIBS lcms2-tev heif)
+endif()
+if (TEV_SUPPORT_DDS)
+    list(APPEND TEV_LIBS DirectXTex)
 endif()
 if (TEV_SUPPORT_JXL)
     # jxl_dec for decoding, jxl_extras for gain maps, jxl_threads for threading support
@@ -319,6 +329,11 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "
         # Coroutines need to be explicitly enabled on g++
         target_compile_options(tev PRIVATE -fcoroutines)
     endif()
+
+    target_compile_options(tev PRIVATE
+        $<$<CONFIG:RelWithDebInfo>:-fno-omit-frame-pointer>
+        $<$<CONFIG:RelWithDebInfo>:-mno-omit-leaf-frame-pointer>
+    )
 endif()
 
 set(CPACK_PACKAGE_VENDOR "Tom94 (Thomas Müller)")
@@ -358,10 +373,6 @@ elseif (WIN32)
     set(CPACK_WIX_PATCH_FILE "${CMAKE_CURRENT_SOURCE_DIR}/resources/windows/patch.wxs")
     set(CPACK_WIX_UPGRADE_GUID "F3EC0D95-B2DC-4451-975C-CF591871E162")
     set(CPACK_WIX_PRODUCT_ICON "${CMAKE_CURRENT_SOURCE_DIR}/resources/windows/icon.ico")
-
-    configure_file(scripts/configure-winget.cmake scripts/configure-winget.cmake @ONLY)
-    configure_file(resources/windows/winget.yaml resources/windows/winget.yaml COPYONLY)
-    set(CPACK_POST_BUILD_SCRIPTS "${CMAKE_BINARY_DIR}/scripts/configure-winget.cmake")
 else()
     install(TARGETS tev)
 

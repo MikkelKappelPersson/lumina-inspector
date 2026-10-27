@@ -15,6 +15,7 @@ What the fork already changes:
 - Binary and install name `lumina-inspector`, so stock `tev` can coexist.
 - IPC on port `14159` instead of `14158`, so the two never attach to each other's instance.
 - Window title, About panel, CLI header.
+- A dedicated image browser panel on the right, holding the open-image list, find field, and playback controls.
 - `README.md`, `NOTICE`, and this documentation.
 
 Everything else is upstream tev. That is deliberate.

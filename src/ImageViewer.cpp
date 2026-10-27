@@ -52,6 +52,9 @@ using namespace std;
 namespace tev {
 
 static constexpr int SIDEBAR_MIN_WIDTH = 230;
+static constexpr int IMAGE_BROWSER_DEFAULT_WIDTH = 230;
+static constexpr int IMAGE_BROWSER_MIN_WIDTH = 150;
+static constexpr int IMAGE_BROWSER_HEADER_HEIGHT = 40;
 static constexpr float CROP_MIN_SIZE = 3;
 static constexpr float MIN_PLAYBACK_FPS = 0.00001f;
 static constexpr float MAX_PLAYBACK_FPS = 100000.0f;
@@ -164,6 +167,11 @@ ImageViewer::ImageViewer(
 
     mImageCanvas = new ImageCanvas{horizontalScreenSplit};
     mImageCanvas->setPixelRatio(pixel_ratio());
+
+    mImageBrowser = new Widget{horizontalScreenSplit};
+    mImageBrowser->set_layout(new BoxLayout{Orientation::Vertical, Alignment::Fill});
+    mImageBrowser->set_fixed_width(IMAGE_BROWSER_DEFAULT_WIDTH);
+    mImageBrowser->set_visible(showUi);
 
     // Tonemapping sectionim
     {
@@ -620,12 +628,8 @@ ImageViewer::ImageViewer(
         {
             auto panel = new Widget{mSidebarLayout};
             panel->set_layout(new BoxLayout{Orientation::Vertical, Alignment::Fill, 5});
-            auto label = new Label{panel, "Images", "sans-bold", 25};
-            label->set_tooltip(
-                "Select images either by left-clicking on them or by pressing arrow/number keys on your keyboard.\n"
-                "Right-clicking an image marks it as the 'reference' image. "
-                "While a reference image is set, the currently selected image is not simply displayed, but compared to the reference image."
-            );
+            auto label = new Label{panel, "Histogram", "sans-bold", 25};
+            label->set_tooltip("Distribution of the selected image's channel values.");
         }
 
         // Histogram of selected image
@@ -634,84 +638,6 @@ ImageViewer::ImageViewer(
             panel->set_layout(new BoxLayout{Orientation::Vertical, Alignment::Fill, 5});
 
             mHistogram = new MultiGraph{panel, ""};
-        }
-
-        // Fuzzy filter of open images
-        {
-            auto panel = new Widget{mSidebarLayout};
-            panel->set_layout(new GridLayout{Orientation::Horizontal, 2, Alignment::Fill, 5, 2});
-
-            mFilter = new TextBox{panel, ""};
-            mFilter->set_editable(true);
-            mFilter->set_alignment(TextBox::Alignment::Left);
-            mFilter->set_callback([this](string_view filter) { return setFilter(filter); });
-
-            mFilter->set_placeholder("Find");
-            mFilter->set_tooltip(
-                fmt::format(
-                    "Filters visible images and channel groups according to a supplied string. "
-                    "The string must have the format 'image:group'. "
-                    "Only images whose name contains 'image' and groups whose name contains 'group' will be visible.\n\n"
-                    "Keyboard shortcut: {}+F",
-                    HelpWindow::COMMAND
-                )
-            );
-
-            mRegexButton = new Button{panel, "", FA_SEARCH};
-            mRegexButton->set_tooltip("Treat filter as regular expression");
-            mRegexButton->set_pushed(false);
-            mRegexButton->set_flags(Button::ToggleButton);
-            mRegexButton->set_font_size(15);
-            mRegexButton->set_change_callback([this](bool value) { setUseRegex(value); });
-        }
-
-        // Playback controls
-        {
-            auto playback = new Widget{mSidebarLayout};
-            playback->set_layout(new GridLayout{Orientation::Horizontal, 6, Alignment::Fill, 5, 2});
-
-            const auto makePlaybackButton =
-                [&](string_view name, bool enabled, function<void()> callback, int icon = 0, string_view tooltip = "") {
-                    auto button = new Button{playback, name, icon};
-                    button->set_callback(callback);
-                    button->set_tooltip(tooltip);
-                    button->set_font_size(15);
-                    button->set_enabled(enabled);
-                    button->set_padding({10, 10});
-                    return button;
-                };
-
-            mPlayButton = makePlaybackButton("", true, [] {}, FA_PLAY, "Play (Space)");
-            mPlayButton->set_flags(Button::ToggleButton);
-            mPlayButton->set_change_callback([this](bool value) { setPlayingBack(value); });
-
-            mAnyImageButtons.push_back(
-                makePlaybackButton("", false, [this] { selectImage(nthVisibleImage(0)); }, FA_FAST_BACKWARD, "Front (Home)")
-            );
-
-            mAnyImageButtons.push_back(
-                makePlaybackButton("", false, [this] { selectImage(nthVisibleImage(mImages.size())); }, FA_FAST_FORWARD, "Back (End)")
-            );
-
-            mFpsTextBox = new FloatBox<float>{playback, 24.0f};
-            mFpsTextBox->set_default_value("24");
-            mFpsTextBox->set_units("fps");
-            mFpsTextBox->set_editable(true);
-            mFpsTextBox->set_alignment(TextBox::Alignment::Right);
-            mFpsTextBox->set_min_max_values(MIN_PLAYBACK_FPS, MAX_PLAYBACK_FPS);
-            mFpsTextBox->set_spinnable(true);
-            mFpsTextBox->set_value_increment(1.0f);
-
-            mAutoFitToScreenButton =
-                makePlaybackButton("", true, {}, FA_EXPAND_ARROWS_ALT, "Automatically fit image to screen upon selection.");
-            mAutoFitToScreenButton->set_flags(Button::Flags::ToggleButton);
-            mAutoFitToScreenButton->set_change_callback([this](bool value) { setAutoFitToScreen(value); });
-
-            mResizeWindowToFitImageOnLoadButton =
-                makePlaybackButton("", true, {}, FA_WINDOW_RESTORE, "Automatically resize tev's window to fit image on load.");
-            mResizeWindowToFitImageOnLoadButton->set_flags(Button::Flags::ToggleButton);
-            mResizeWindowToFitImageOnLoadButton->set_change_callback([this](bool value) { setResizeWindowToFitImageOnLoad(value); });
-            mResizeWindowToFitImageOnLoadButton->set_pushed(true);
         }
 
         // Save, refresh, load, close
@@ -775,18 +701,105 @@ ImageViewer::ImageViewer(
             spacer = new Widget{mSidebarLayout};
             spacer->set_height(3);
         }
+    }
 
-        // List of open images
+    // Browser with the list of open images, in a dedicated panel on the right.
+    {
+        auto* header = new Widget{mImageBrowser};
+        header->set_layout(new BoxLayout{Orientation::Horizontal, Alignment::Middle, 15, 0});
+        header->set_fixed_height(IMAGE_BROWSER_HEADER_HEIGHT);
+        auto* title = new Label{header, "Image Browser", "sans-bold", 20};
+        title->set_tooltip(
+            "Select images either by left-clicking on them or by pressing arrow/number keys on your keyboard.\n"
+            "Right-clicking an image marks it as the 'reference' image. "
+            "While a reference image is set, the currently selected image is not simply displayed, but compared to the reference image."
+        );
+
+        // Fuzzy filter of open images
         {
-            mImageScrollContainer = new VScrollPanel{mSidebarLayout};
-            mImageScrollContainer->set_fixed_width(mSidebarLayout->fixed_width());
+            auto panel = new Widget{mImageBrowser};
+            panel->set_layout(new GridLayout{Orientation::Horizontal, 2, Alignment::Fill, 5, 2});
 
-            mScrollContent = new Widget{mImageScrollContainer};
-            mScrollContent->set_layout(new BoxLayout{Orientation::Vertical, Alignment::Fill});
+            mFilter = new TextBox{panel, ""};
+            mFilter->set_editable(true);
+            mFilter->set_alignment(TextBox::Alignment::Left);
+            mFilter->set_callback([this](string_view filter) { return setFilter(filter); });
 
-            mImageButtonContainer = new Widget{mScrollContent};
-            mImageButtonContainer->set_layout(new BoxLayout{Orientation::Vertical, Alignment::Fill});
+            mFilter->set_placeholder("Find");
+            mFilter->set_tooltip(
+                fmt::format(
+                    "Filters visible images and channel groups according to a supplied string. "
+                    "The string must have the format 'image:group'. "
+                    "Only images whose name contains 'image' and groups whose name contains 'group' will be visible.\n\n"
+                    "Keyboard shortcut: {}+F",
+                    HelpWindow::COMMAND
+                )
+            );
+
+            mRegexButton = new Button{panel, "", FA_SEARCH};
+            mRegexButton->set_tooltip("Treat filter as regular expression");
+            mRegexButton->set_pushed(false);
+            mRegexButton->set_flags(Button::ToggleButton);
+            mRegexButton->set_font_size(15);
+            mRegexButton->set_change_callback([this](bool value) { setUseRegex(value); });
         }
+
+        // Playback controls
+        {
+            auto playback = new Widget{mImageBrowser};
+            playback->set_layout(new GridLayout{Orientation::Horizontal, 6, Alignment::Fill, 5, 2});
+
+            const auto makePlaybackButton =
+                [&](string_view name, bool enabled, function<void()> callback, int icon = 0, string_view tooltip = "") {
+                    auto button = new Button{playback, name, icon};
+                    button->set_callback(callback);
+                    button->set_tooltip(tooltip);
+                    button->set_font_size(15);
+                    button->set_enabled(enabled);
+                    button->set_padding({10, 10});
+                    return button;
+                };
+
+            mPlayButton = makePlaybackButton("", true, [] {}, FA_PLAY, "Play (Space)");
+            mPlayButton->set_flags(Button::ToggleButton);
+            mPlayButton->set_change_callback([this](bool value) { setPlayingBack(value); });
+
+            mAnyImageButtons.push_back(
+                makePlaybackButton("", false, [this] { selectImage(nthVisibleImage(0)); }, FA_FAST_BACKWARD, "Front (Home)")
+            );
+
+            mAnyImageButtons.push_back(
+                makePlaybackButton("", false, [this] { selectImage(nthVisibleImage(mImages.size())); }, FA_FAST_FORWARD, "Back (End)")
+            );
+
+            mFpsTextBox = new FloatBox<float>{playback, 24.0f};
+            mFpsTextBox->set_default_value("24");
+            mFpsTextBox->set_units("fps");
+            mFpsTextBox->set_editable(true);
+            mFpsTextBox->set_alignment(TextBox::Alignment::Right);
+            mFpsTextBox->set_min_max_values(MIN_PLAYBACK_FPS, MAX_PLAYBACK_FPS);
+            mFpsTextBox->set_spinnable(true);
+            mFpsTextBox->set_value_increment(1.0f);
+
+            mAutoFitToScreenButton =
+                makePlaybackButton("", true, {}, FA_EXPAND_ARROWS_ALT, "Automatically fit image to screen upon selection.");
+            mAutoFitToScreenButton->set_flags(Button::Flags::ToggleButton);
+            mAutoFitToScreenButton->set_change_callback([this](bool value) { setAutoFitToScreen(value); });
+
+            mResizeWindowToFitImageOnLoadButton =
+                makePlaybackButton("", true, {}, FA_WINDOW_RESTORE, "Automatically resize tev's window to fit image on load.");
+            mResizeWindowToFitImageOnLoadButton->set_flags(Button::Flags::ToggleButton);
+            mResizeWindowToFitImageOnLoadButton->set_change_callback([this](bool value) { setResizeWindowToFitImageOnLoad(value); });
+            mResizeWindowToFitImageOnLoadButton->set_pushed(true);
+        }
+
+        mImageScrollContainer = new VScrollPanel{mImageBrowser};
+
+        mScrollContent = new Widget{mImageScrollContainer};
+        mScrollContent->set_layout(new BoxLayout{Orientation::Vertical, Alignment::Fill});
+
+        mImageButtonContainer = new Widget{mScrollContent};
+        mImageButtonContainer->set_layout(new BoxLayout{Orientation::Vertical, Alignment::Fill});
     }
 
     // Group selection
@@ -825,10 +838,18 @@ bool ImageViewer::resize_event(const Vector2i& size) {
 }
 
 bool ImageViewer::mouse_button_event(const Vector2i& p, int button, bool down, int modifiers) {
+    // The image browser's resize handle overlaps the image list, so claim it before the list sees the event.
+    if (down && canDragImageBrowserFrom(p)) {
+        mDraggingStartPosition = p;
+        mDragType = EMouseDragType::ImageBrowserDrag;
+        return true;
+    }
+
     // Check if the user performed mousedown on an imagebutton so we can mark it as being dragged. This has to occur before
     // Screen::mouse_button_event as the button would absorb the event.
     if (down) {
-        if (mImageScrollContainer->contains(p - mSidebarLayout->parent()->position())) {
+        const auto browserPos = (absolute_position() + p) - mImageScrollContainer->parent()->absolute_position();
+        if (mImageScrollContainer->contains(browserPos)) {
             auto& buttons = mImageButtonContainer->children();
 
             Vector2i relMousePos = (absolute_position() + p) - mImageButtonContainer->absolute_position();
@@ -889,15 +910,23 @@ bool ImageViewer::mouse_motion_event_f(const Vector2f& p, const Vector2f& rel, i
         return true;
     }
 
-    bool shouldShowResizeCursor = mDragType == EMouseDragType::SidebarDrag || canDragSidebarFrom(p);
+    bool shouldShowResizeCursor = mDragType == EMouseDragType::SidebarDrag ||
+                                  mDragType == EMouseDragType::ImageBrowserDrag || canDragSidebarFrom(p) ||
+                                  canDragImageBrowserFrom(p);
     Cursor cursorType = shouldShowResizeCursor ? Cursor::HResize : Cursor::Arrow;
 
     mSidebarLayout->set_cursor(cursorType);
+    mImageBrowser->set_cursor(cursorType);
     mImageCanvas->set_cursor(cursorType);
 
     switch (mDragType) {
         case EMouseDragType::SidebarDrag:
             mSidebar->set_fixed_width(clamp(p.x(), (float)SIDEBAR_MIN_WIDTH, (float)m_size.x() - 10.0f));
+            requestLayoutUpdate();
+            break;
+
+        case EMouseDragType::ImageBrowserDrag:
+            mImageBrowser->set_fixed_width(clamp((float)(m_size.x() - p.x()), (float)IMAGE_BROWSER_MIN_WIDTH, (float)m_size.x() - 10.0f));
             requestLayoutUpdate();
             break;
 
@@ -2196,6 +2225,10 @@ Vector2f ImageViewer::sizeToFitImage(const shared_ptr<Image>& image) {
         requiredSize.x() += mSidebar->fixed_width();
     }
 
+    if (mImageBrowser->visible()) {
+        requiredSize.x() += mImageBrowser->fixed_width();
+    }
+
     if (mFooter->visible()) {
         requiredSize.y() += mFooter->fixed_height();
     }
@@ -2321,11 +2354,12 @@ void ImageViewer::toggleMaximized() {
 }
 
 void ImageViewer::setUiVisible(bool shouldBeVisible) {
-    if (!shouldBeVisible && mDragType == EMouseDragType::SidebarDrag) {
+    if (!shouldBeVisible && (mDragType == EMouseDragType::SidebarDrag || mDragType == EMouseDragType::ImageBrowserDrag)) {
         mDragType = EMouseDragType::None;
     }
 
     mSidebar->set_visible(shouldBeVisible);
+    mImageBrowser->set_visible(shouldBeVisible);
     mFooter->set_visible(mShouldFooterBeVisible && shouldBeVisible);
 
     requestLayoutUpdate();
@@ -2864,24 +2898,22 @@ void ImageViewer::updateFilter() {
 
 void ImageViewer::updateLayout() {
     int sidebarWidth = visibleSidebarWidth();
+    int imageBrowserWidth = visibleImageBrowserWidth();
     int footerHeight = visibleFooterHeight();
-    mImageCanvas->set_fixed_size(m_size - Vector2i{sidebarWidth, footerHeight});
+    mImageCanvas->set_fixed_size(m_size - Vector2i{sidebarWidth + imageBrowserWidth, footerHeight});
     mSidebar->set_fixed_height(m_size.y() - footerHeight);
+    mImageBrowser->set_fixed_height(m_size.y() - footerHeight);
 
     mVerticalScreenSplit->set_fixed_size(m_size);
-    mImageScrollContainer->set_fixed_height(m_size.y() - mImageScrollContainer->position().y() - footerHeight);
-
-    if (mImageScrollContainer->fixed_height() < 100) {
-        // Stop scrolling the image button container and instead scroll the entire sidebar
-        mImageScrollContainer->set_fixed_height(0);
-    }
 
     mSidebarLayout->parent()->set_height(mSidebarLayout->preferred_size(m_nvg_context).y());
+    mFilter->set_fixed_width(mImageBrowser->fixed_width() - 50);
     perform_layout();
+
+    mImageScrollContainer->set_fixed_height(std::max(0, mImageBrowser->height() - mImageScrollContainer->position().y()));
 
     mSidebarLayout->set_fixed_width(mSidebarLayout->parent()->width());
     mHelpButton->set_position(Vector2i{mSidebarLayout->fixed_width() - 38, 5});
-    mFilter->set_fixed_width(mSidebarLayout->fixed_width() - 50);
     perform_layout();
 
     // With a changed layout the relative position of the mouse

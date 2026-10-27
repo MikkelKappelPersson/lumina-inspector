@@ -244,7 +244,14 @@ private:
         return mSidebar->visible() && p.x() - mSidebar->fixed_width() < 10 && p.x() - mSidebar->fixed_width() > -5;
     }
 
+    bool canDragImageBrowserFrom(nanogui::Vector2i p) {
+        const int leftEdge = m_size.x() - mImageBrowser->fixed_width();
+        return mImageBrowser->visible() && p.x() - leftEdge < 5 && p.x() - leftEdge > -10;
+    }
+
     int visibleSidebarWidth() { return mSidebar->visible() ? mSidebar->fixed_width() : 0; }
+
+    int visibleImageBrowserWidth() { return mImageBrowser->visible() ? mImageBrowser->fixed_width() : 0; }
 
     int visibleFooterHeight() { return mFooter->visible() ? mFooter->fixed_height() : 0; }
 
@@ -260,6 +267,8 @@ private:
     nanogui::Widget* mSidebar = nullptr;
     nanogui::Button* mHelpButton = nullptr;
     nanogui::Widget* mSidebarLayout = nullptr;
+
+    nanogui::Widget* mImageBrowser = nullptr;
 
     nanogui::Widget* mFooter = nullptr;
     bool mShouldFooterBeVisible = false;
@@ -328,6 +337,7 @@ private:
         ImageCrop,
         ImageButtonDrag,
         SidebarDrag,
+        ImageBrowserDrag,
     };
 
     nanogui::Vector2i mDraggingStartPosition;

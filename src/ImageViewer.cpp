@@ -156,7 +156,7 @@ ImageViewer::ImageViewer(
     mHelpButton = new Button{tmp, "", FA_QUESTION};
     mHelpButton->set_change_callback([this](bool) { toggleHelpWindow(); });
     mHelpButton->set_font_size(15);
-    mHelpButton->set_tooltip("Information about using tev.");
+    mHelpButton->set_tooltip("Information about using Lumina Inspector.");
     mHelpButton->set_flags(Button::ToggleButton);
 
     mSidebarLayout = new Widget{tmp};

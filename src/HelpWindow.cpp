@@ -220,12 +220,12 @@ HelpWindow::HelpWindow(Widget* parent, weak_ptr<Ipc> weakIpc, function<void()> c
 
     addSpacer(about, 5);
 
-    addText(about, "tev — The EDR Viewer", "sans-bold", 46);
+    addText(about, "Lumina Inspector", "sans-bold", 46);
     addText(about, fmt::format("version " TEV_VERSION " ({})", xsimd::default_arch::name()), "sans", 26);
 
     addSpacer(about, 20);
 
-    addText(about, "tev was developed by Thomas Müller <tom94.net> and is released under the GPLv3 license.");
+    addText(about, "Lumina Inspector is a fork of tev, developed by Thomas Müller <tom94.net> and released under the GPLv3 license. Fork modifications by Mikkel Kappel Persson.");
     addText(about, "It was built directly or indirectly upon the following amazing third-party libraries.");
 
     addSpacer(about, 20);

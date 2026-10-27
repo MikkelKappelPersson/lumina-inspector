@@ -256,12 +256,12 @@ static void convertTo(
 }
 
 static int mainFunc(span<const string> arguments) {
-    static const string TEV_STRING = "tev — The EDR Viewer";
+    static const string TEV_STRING = "Lumina Inspector";
     static const string VERSION_STRING = fmt::format("version: " TEV_VERSION " ({})", xsimd::default_arch::name());
-    static const string COPYRIGHT_STRING = "copyright: (C) 2017-2026 Thomas Müller <tom94.net>";
-    static const string SOURCE_STRING = "source: https://tom94.net/tev";
+    static const string COPYRIGHT_STRING = "copyright: (C) 2017-2026 Thomas Müller <tom94.net>; fork modifications (C) 2026 Mikkel Kappel Persson";
+    static const string SOURCE_STRING = "source: https://github.com/MikkelKappelPersson/lumina-inspector";
     static const string LICENSE_STRING = "license: GPLv3";
-    static const string DESCRIPTION_STRING = "High dynamic range (HDR) image viewer for people who care about colors";
+    static const string DESCRIPTION_STRING = "Scientific and technical image analysis for high dynamic range and floating-point data";
 
     static const string HELP_STRING =
         join(vector{TEV_STRING, DESCRIPTION_STRING, VERSION_STRING, COPYRIGHT_STRING, SOURCE_STRING, LICENSE_STRING}, "\n");

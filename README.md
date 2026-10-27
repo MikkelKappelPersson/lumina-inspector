@@ -6,6 +6,8 @@ Lumina Inspector is a fork of [tev — The EDR Viewer](https://github.com/Tom94/
 
 > **Status:** early fork, tracking tev. Everything tev does, it still does. Additions are listed under [What is different](#what-is-different-from-tev).
 
+The roadmap lives in [`docs/features.md`](docs/features.md), and the internals map in [`docs/codebase-notes.md`](docs/codebase-notes.md).
+
 ![Screenshot](resources/screenshot.png)
 _The interface inherited from tev: a false-colour comparison of two multi-layer OpenEXR images. Image courtesy of [openexr-images](https://github.com/openexr/openexr-images)._
 

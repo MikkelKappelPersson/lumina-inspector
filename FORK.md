@@ -51,6 +51,11 @@ ln -sf ~/.local/opt/lumina-inspector/bin/lumina-inspector ~/.local/bin/lumina-in
 
 The binary is named `lumina-inspector`, so the stock AppImage stays available as `tev`. The fork listens on IPC port `14159` rather than tev's `14158`, so the two never capture each other's launches.
 
+## Documentation
+
+- [`docs/features.md`](docs/features.md) — feature wishlist and handoff notes, with effort and verification steps.
+- [`docs/codebase-notes.md`](docs/codebase-notes.md) — where things live in tev, the extension seams, and the traps.
+
 ## Licence
 
 GPL-3.0, inherited from tev. See `LICENSE.txt` for the full text and `NOTICE` for the attribution summary. This repository is the complete corresponding source for any binary built from it.

@@ -97,7 +97,7 @@ static constexpr array<pair<ituth273::ETransfer, string_view>, 13> TRANSFERS = {
 ImageViewer::ImageViewer(
     Vector2i size, const shared_ptr<BackgroundImagesLoader>& imagesLoader, weak_ptr<Ipc> ipc, bool maximize, bool showUi, bool floatBuffer
 ) :
-    Screen{size, "tev", true, maximize, false, true, true, floatBuffer}, mImagesLoader{imagesLoader}, mIpc{ipc}, mMaximizedLaunch{maximize} {
+    Screen{size, "Lumina Inspector", true, maximize, false, true, true, floatBuffer}, mImagesLoader{imagesLoader}, mIpc{ipc}, mMaximizedLaunch{maximize} {
 
     m_theme->m_message_warning_icon = FA_EXCLAMATION_CIRCLE;
 
@@ -2894,7 +2894,7 @@ void ImageViewer::updateLayout() {
 
 void ImageViewer::updateTitle() {
     if (!mCurrentImage) {
-        set_caption("tev");
+        set_caption("Lumina Inspector");
         return;
     }
 

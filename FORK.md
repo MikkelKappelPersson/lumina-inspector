@@ -45,9 +45,11 @@ Requires CMake, Ninja, a C++23 compiler, `nasm`, and the X11/Wayland development
 ```bash
 cmake . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
+cmake --install build --prefix ~/.local/opt/lumina-inspector
+ln -sf ~/.local/opt/lumina-inspector/bin/lumina-inspector ~/.local/bin/lumina-inspector
 ```
 
-Install as `tev-dev` so the stock AppImage (`tev`) stays available as a fallback.
+The binary is named `lumina-inspector`, so the stock AppImage stays available as `tev`. The fork listens on IPC port `14159` rather than tev's `14158`, so the two never capture each other's launches.
 
 ## Licence
 

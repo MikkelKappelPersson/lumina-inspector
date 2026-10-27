@@ -218,6 +218,9 @@ endif()
 
 add_executable(tev ${TEV_SOURCES})
 
+# This fork installs under its own name so the stock tev stays available alongside it.
+set_target_properties(tev PROPERTIES OUTPUT_NAME "lumina-inspector")
+
 if (APPLE)
     set(RESOURCE_FILES
         resources/macos/icon.icns
